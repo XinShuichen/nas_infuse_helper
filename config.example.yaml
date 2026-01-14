@@ -1,0 +1,17 @@
+# Core Configuration
+source_dir: "/path/to/downloads"
+target_dir: "/path/to/media_library"
+tmdb_api_key: "YOUR_TMDB_API_KEY"
+
+# Optional: Path Mapping
+# Use this if the path your server sees is different from the path your media player sees.
+# Format: "Server Path": "Real NAS Path"
+# path_mapping:
+#   "/mnt/nas/downloads": "/volume1/Media/Downloads"
+
+# System Settings
+server_port: 5000
+scan_interval_minutes: 60
+video_extensions: [".mp4", ".mkv", ".avi", ".mov", ".iso"]
+verbose: false
+database_path: "media.db"

@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.DS_Store
+.trae/
+venv/
+.env
+config.yaml
+API_KEY
+metadata.db
+raw/
+organized/
+tree.txt
+recreate_structure.py
+replace.py
+diagnose_tv.py
+TARGET.md
