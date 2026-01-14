@@ -170,6 +170,25 @@ class Searcher:
         return None
 
     def search(self, item: MediaItem) -> MediaItem:
+        # 0. Check for Forced TMDB ID in file path (including parent folders)
+        # Pattern: {tmdb-12345}, {tmdb-tv-12345}, {tmdb-movie-12345}
+        # We check from the file/folder name upwards
+        path_parts = list(reversed(item.original_path.parts))
+        for part in path_parts:
+            match = re.search(r'\{tmdb-(?:(tv|movie)-)?(\d+)\}', part, re.IGNORECASE)
+            if match:
+                type_prefix = match.group(1) # 'tv' or 'movie' or None
+                tmdb_id_str = match.group(2)
+                
+                if type_prefix:
+                    forced_alias = f"tmdb-{type_prefix.lower()}-{tmdb_id_str}"
+                else:
+                    forced_alias = f"tmdb-{tmdb_id_str}"
+                
+                print(f"Found Forced TMDB ID in path: '{part}' -> Using alias '{forced_alias}'")
+                item.alias = forced_alias
+                break
+
         # Detect season if not already set
         if item.season is None:
             item.season = self.extract_season_from_name(item.name)

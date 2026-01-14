@@ -571,11 +571,35 @@
                         };
                     }
                     aggregated[key].episodes.push(item);
+                } else if (mType.includes('tv') || mType.includes('show')) {
+                    // TV Show without ID -> Aggregate by Folder
+                    // This fixes the issue where unmatched episodes appear as scattered cards
+                    const parentDir = item.original_path.substring(0, item.original_path.lastIndexOf('/'));
+                    const key = `folder-${parentDir}`;
+                    
+                    if (!aggregated[key]) {
+                         const folderName = parentDir.split('/').pop();
+                         aggregated[key] = {
+                             ...item,
+                             title_cn: folderName, // Use folder name as title
+                             title_en: parentDir,  // Show path as subtitle
+                             tmdb_id: '',          // No ID
+                             episodes: [],
+                             is_folder_group: true
+                         };
+                    }
+                    aggregated[key].episodes.push(item);
                 } else {
                     standalone.push(item);
                 }
             });
 
+            // Post-processing: If a folder group only has 1 item, maybe treat it as standalone?
+            // Actually, for consistency, even 1 item in a "TV Show" context is better shown as a card that represents the "Show" (Folder)
+            // But if the folder is root (e.g. Downloads), and we have multiple shows...
+            // But we grouped by parentDir. So files in Downloads/ShowA/ are grouped. Files in Downloads/ are grouped.
+            // If user puts S01E01 directly in Downloads/, they will be grouped. This is acceptable/expected behavior for TV Shows.
+            
             let finalData = [...Object.values(aggregated), ...standalone];
 
             finalData.sort((a, b) => {
