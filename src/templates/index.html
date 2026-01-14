@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAS Infuse Helper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+        
+        :root {
+            --bg-main: #0a0a0a;
+            --bg-sidebar: #0d0d0d;
+            --bg-card: #111111;
+            --accent: #10b981;
+            --border: #1f2937;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #333;
+        }
+    </style>
+</head>
+<body class="bg-[#0a0a0a] text-gray-300 font-sans min-h-screen flex overflow-hidden">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-20 bg-[#0d0d0d] border-r border-gray-800 flex flex-col transition-all duration-300 h-screen shrink-0 group hover:w-64">
+        <div class="p-6 border-b border-gray-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3 overflow-hidden">
+                <div class="w-8 h-8 bg-green-500 rounded flex items-center justify-center shrink-0">
+                    <i class="fas fa-leaf text-black text-sm"></i>
+                </div>
+                <span class="font-bold text-white tracking-wider text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">INFUSE HELPER</span>
+            </div>
+        </div>
+        <nav class="flex-1 p-4 space-y-2 mt-4">
+            <button onclick="switchTab('resources')" id="nav-resources" class="w-full flex items-center space-x-3 p-3 bg-gray-800/50 text-green-500 rounded-lg border border-gray-700/50 transition-all justify-center group-hover:justify-start">
+                <i class="fas fa-th-large w-5 text-center"></i>
+                <span class="text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-0 group-hover:w-auto">资源管理</span>
+            </button>
+            <button onclick="switchTab('metrics')" id="nav-metrics" class="w-full flex items-center space-x-3 p-3 text-gray-500 hover:text-gray-300 transition-all justify-center group-hover:justify-start">
+                <i class="fas fa-chart-line w-5 text-center"></i>
+                <span class="text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-0 group-hover:w-auto">指标面板</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="w-full flex items-center space-x-3 p-3 text-gray-500 hover:text-gray-300 transition-all justify-center group-hover:justify-start">
+                <i class="fas fa-cog w-5 text-center"></i>
+                <span class="text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-0 group-hover:w-auto">System Config</span>
+            </button>
+            <button onclick="switchTab('logs')" id="nav-logs" class="w-full flex items-center space-x-3 p-3 text-gray-500 hover:text-gray-300 transition-all justify-center group-hover:justify-start">
+                <i class="fas fa-terminal w-5 text-center"></i>
+                <span class="text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-0 group-hover:w-auto">System Logs</span>
+            </button>
+        </nav>
+        <div class="p-6 border-t border-gray-800">
+            <div class="flex items-center space-x-3 text-xs text-gray-600 justify-center group-hover:justify-start">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse shrink-0"></div>
+                <span class="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-0 group-hover:w-auto">Server Online</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+        <!-- Header -->
+        <header class="h-16 border-b border-gray-800 bg-[#0d0d0d] flex items-center justify-between px-8 shrink-0">
+            <div class="flex items-center flex-1">
+                <h2 class="text-xl font-bold text-white tracking-tight mr-12">Media Management</h2>
+                <div class="relative w-96 group">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-green-500 transition-colors text-xs"></i>
+                    <input type="text" id="global-search" oninput="filterAndSortMedia()" placeholder="Search resource name..." class="w-full bg-[#151515] border border-gray-800 rounded-lg pl-10 pr-4 text-xs focus:outline-none focus:border-green-500/50 focus:bg-[#1a1a1a] transition-all placeholder-gray-600 text-gray-300 h-6">
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <button onclick="triggerScan()" class="bg-green-600/10 text-green-500 border border-green-600/30 hover:bg-green-600/20 px-3 py-1 rounded text-[10px] font-medium transition-all flex items-center h-6 whitespace-nowrap">
+                    <i class="fas fa-sync-alt mr-1.5"></i>Full
+                </button>
+                <button onclick="triggerIncrementalScan()" class="bg-blue-600/10 text-blue-500 border border-blue-600/30 hover:bg-blue-600/20 px-3 py-1 rounded text-[10px] font-medium transition-all flex items-center h-6 whitespace-nowrap">
+                    <i class="fas fa-bolt mr-1.5"></i>Inc
+                </button>
+                <button onclick="triggerReprocess()" class="bg-purple-600/10 text-purple-500 border border-purple-600/30 hover:bg-purple-600/20 px-3 py-1 rounded text-[10px] font-medium transition-all flex items-center h-6 whitespace-nowrap">
+                    <i class="fas fa-redo mr-1.5"></i>Retry
+                </button>
+                <button onclick="resetSystem()" class="bg-red-600/10 text-red-500 border border-red-600/30 hover:bg-red-600/20 px-3 py-1 rounded text-[10px] font-medium transition-all flex items-center h-6 whitespace-nowrap">
+                    <i class="fas fa-trash-alt mr-1.5"></i>Reset
+                </button>
+            </div>
+        </header>
+
+        <!-- Tool Bar -->
+        <div class="px-8 py-4 bg-[#0a0a0a] border-b border-gray-800 flex items-center justify-between sticky top-16 z-30 shadow-sm">
+            <div class="flex items-center space-x-2">
+                <button onclick="loadMedia('')" class="px-4 py-1.5 rounded text-xs font-medium border border-gray-800 hover:bg-gray-800/50 transition-colors text-gray-400">All</button>
+                <button onclick="loadMedia('not_found')" class="px-4 py-1.5 rounded text-xs font-medium border border-gray-800 hover:bg-gray-800/50 transition-colors text-gray-400">Not Found</button>
+                <button onclick="loadMedia('uncertain')" class="px-4 py-1.5 rounded text-xs font-medium border border-gray-800 hover:bg-gray-800/50 transition-colors text-gray-400">Uncertain</button>
+                <button onclick="loadMedia('hidden')" class="px-4 py-1.5 rounded text-xs font-medium border border-gray-800 hover:bg-gray-800/50 transition-colors text-gray-400">Hidden</button>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button onclick="toggleSortDropdown()" class="bg-[#151515] border border-gray-800 rounded px-3 py-1.5 text-xs text-gray-400 focus:outline-none focus:border-green-500/50 flex items-center space-x-2 min-w-[140px] justify-between hover:text-gray-200 transition-colors">
+                        <span id="current-sort-label">Created At (Newest)</span>
+                        <i class="fas fa-chevron-down text-[10px]"></i>
+                    </button>
+                    <!-- Custom Dropdown Menu -->
+                    <div id="sort-options" class="hidden absolute top-full right-0 mt-2 w-48 bg-[#151515] border border-gray-800 rounded-lg shadow-xl z-50 py-1">
+                        <button onclick="setSort('time_desc', 'Created At (Newest)')" class="w-full text-left px-3 py-2 text-xs text-gray-400 hover:bg-white/5 hover:text-green-500 transition-colors flex items-center justify-between group" data-val="time_desc">
+                            <span>Created At (Newest)</span>
+                            <i class="fas fa-check text-green-500 opacity-100 check-icon"></i>
+                        </button>
+                        <button onclick="setSort('time_asc', 'Created At (Oldest)')" class="w-full text-left px-3 py-2 text-xs text-gray-400 hover:bg-white/5 hover:text-green-500 transition-colors flex items-center justify-between group" data-val="time_asc">
+                            <span>Created At (Oldest)</span>
+                            <i class="fas fa-check text-green-500 opacity-0 check-icon"></i>
+                        </button>
+                        <button onclick="setSort('name_asc', 'Name (A-Z)')" class="w-full text-left px-3 py-2 text-xs text-gray-400 hover:bg-white/5 hover:text-green-500 transition-colors flex items-center justify-between group" data-val="name_asc">
+                            <span>Name (A-Z)</span>
+                            <i class="fas fa-check text-green-500 opacity-0 check-icon"></i>
+                        </button>
+                        <button onclick="setSort('type_asc', 'Category')" class="w-full text-left px-3 py-2 text-xs text-gray-400 hover:bg-white/5 hover:text-green-500 transition-colors flex items-center justify-between group" data-val="type_asc">
+                            <span>Category</span>
+                            <i class="fas fa-check text-green-500 opacity-0 check-icon"></i>
+                        </button>
+                    </div>
+                    <input type="hidden" id="sort-select" value="time_desc">
+                </div>
+                <div class="flex bg-[#151515] rounded p-0.5 border border-gray-800">
+                    <button onclick="setViewMode('list')" id="btn-view-list" class="p-1.5 rounded transition-all text-gray-600 hover:text-white">
+                        <i class="fas fa-list-ul text-xs"></i>
+                    </button>
+                    <button onclick="setViewMode('grid')" id="btn-view-grid" class="p-1.5 rounded transition-all text-green-500 bg-gray-800 shadow-sm">
+                        <i class="fas fa-th text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <!-- Resources Tab -->
+            <div id="tab-resources" class="tab-content">
+                <!-- Progress Overlay (Subtle) -->
+                <div id="task-progress" class="hidden mb-6 bg-green-500/5 border border-green-500/20 rounded-lg p-4 flex items-center justify-between animate-pulse">
+                    <div class="flex items-center space-x-4">
+                        <i class="fas fa-circle-notch fa-spin text-green-500"></i>
+                        <div>
+                            <p class="text-xs font-medium text-green-500" id="task-msg">Scanning files...</p>
+                            <div class="w-64 h-1 bg-gray-800 rounded-full mt-2 overflow-hidden">
+                                <div id="task-bar" class="h-full bg-green-500 transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Media Container -->
+                <div id="media-list">
+                    <!-- Data will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Metrics Tab -->
+            <div id="tab-metrics" class="tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-[#111] border border-gray-800 p-6 rounded-xl">
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">Total Items</p>
+                        <h3 class="text-3xl font-bold text-white" id="stat-total">0</h3>
+                    </div>
+                    <div class="bg-[#111] border border-gray-800 p-6 rounded-xl">
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">Matched</p>
+                        <h3 class="text-3xl font-bold text-green-500" id="stat-matched">0</h3>
+                    </div>
+                    <div class="bg-[#111] border border-gray-800 p-6 rounded-xl">
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">Uncertain</p>
+                        <h3 class="text-3xl font-bold text-yellow-500" id="stat-uncertain">0</h3>
+                    </div>
+                    <div class="bg-[#111] border border-gray-800 p-6 rounded-xl">
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">Failed</p>
+                        <h3 class="text-3xl font-bold text-red-500" id="stat-failed">0</h3>
+                    </div>
+                </div>
+                <div class="bg-[#111] border border-gray-800 rounded-xl overflow-hidden">
+                    <div class="p-6 border-b border-gray-800">
+                        <h3 class="text-white font-bold text-sm uppercase tracking-widest">Active Task Log</h3>
+                    </div>
+                    <div id="task-log" class="p-6 font-mono text-xs text-gray-500 space-y-2 h-96 overflow-y-auto">
+                        <div class="flex space-x-4">
+                            <span class="text-gray-700">[SYSTEM]</span>
+                            <span>Dashboard initialized. Monitoring source directory...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="tab-settings" class="tab-content hidden">
+                <div class="max-w-2xl bg-[#111] border border-gray-800 rounded-xl overflow-hidden">
+                    <div class="p-6 border-b border-gray-800">
+                        <h3 class="text-white font-bold text-sm uppercase tracking-widest">System Configuration</h3>
+                    </div>
+                    <div class="p-8 space-y-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Source Directory</label>
+                            <input id="conf-source-dir" type="text" class="w-full bg-[#151515] border border-gray-800 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Target Directory</label>
+                            <input id="conf-target-dir" type="text" class="w-full bg-[#151515] border border-gray-800 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">TMDB API Token</label>
+                            <input id="conf-tmdb-key" type="password" class="w-full bg-[#151515] border border-gray-800 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50">
+                            <p class="text-[10px] text-gray-600 mt-2 font-mono italic">Encrypted for security. Only new values will be saved.</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Server Port</label>
+                                <input id="conf-port" type="number" class="w-full bg-[#151515] border border-gray-800 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Scan Interval (Min)</label>
+                                <input id="conf-interval" type="number" class="w-full bg-[#151515] border border-gray-800 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50">
+                            </div>
+                        </div>
+                        <div class="pt-6 border-t border-gray-800 flex justify-end">
+                            <button onclick="saveConfig()" class="bg-green-600 hover:bg-green-500 text-black font-bold px-8 py-2.5 rounded text-xs uppercase tracking-widest transition-all">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="tab-logs" class="tab-content hidden">
+                <div class="bg-[#111] border border-gray-800 rounded-xl overflow-hidden">
+                    <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-sm uppercase tracking-widest">System Operations Log</h3>
+                        <button onclick="loadLogs()" class="text-green-500 hover:text-white transition-colors"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse font-mono">
+                            <thead>
+                                <tr class="bg-[#181818] border-b border-gray-800 text-gray-500 uppercase tracking-widest font-bold">
+                                    <th class="px-6 py-4 w-32">Timestamp</th>
+                                    <th class="px-6 py-4 w-24">Type</th>
+                                    <th class="px-6 py-4">Target</th>
+                                    <th class="px-6 py-4">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body" class="divide-y divide-gray-800/50">
+                                <!-- Logs here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Confirm/Alert Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4">
+        <div class="bg-[#0d0d0d] border border-gray-800 w-full max-w-sm rounded-xl shadow-2xl p-8 text-center">
+            <div id="confirm-icon" class="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-question text-2xl"></i>
+            </div>
+            <h3 id="confirm-title" class="text-white font-bold text-lg mb-2">Confirm Action</h3>
+            <p id="confirm-msg" class="text-gray-500 text-sm mb-8 leading-relaxed"></p>
+            <div class="flex space-x-3">
+                <button id="confirm-cancel-btn" onclick="closeConfirm(false)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-400 font-bold py-2.5 rounded text-xs uppercase tracking-widest transition-all">Cancel</button>
+                <button id="confirm-ok-btn" onclick="closeConfirm(true)" class="flex-1 bg-green-600 hover:bg-green-500 text-black font-bold py-2.5 rounded text-xs uppercase tracking-widest transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-[#0d0d0d] border border-gray-800 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b border-gray-800 flex items-center justify-between">
+                <div class="min-w-0 flex-1 mr-4">
+                    <h3 class="text-white font-bold text-base">Manual Match</h3>
+                    <p class="text-[11px] text-gray-500 mt-1 font-mono break-all" id="modal-path"></p>
+                </div>
+                <button onclick="closeSearch()" class="text-gray-500 hover:text-white transition-colors shrink-0">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 bg-[#111]">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"></i>
+                    <input id="search-input" type="text" 
+                           class="w-full bg-[#151515] border border-gray-800 rounded-lg pl-12 pr-4 py-3 text-sm focus:outline-none focus:border-green-500/50 transition-colors" 
+                           placeholder="Keywords or 'tmdb-ID', 'tmdb-tv-ID', 'tmdb-movie-ID' to force match...">
+                </div>
+                <button onclick="searchTMDB()" class="w-full mt-4 bg-green-600 hover:bg-green-500 text-black font-bold py-2.5 rounded-lg text-xs uppercase tracking-widest transition-all">
+                    Search Candidates
+                </button>
+            </div>
+            
+            <div class="px-6 pb-2 bg-[#111] border-b border-gray-800">
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <div class="relative">
+                        <input type="checkbox" id="apply-batch-checkbox" class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs font-bold text-gray-300 group-hover:text-white transition-colors">Apply to all files in this directory</span>
+                        <span class="text-[10px] text-gray-500">Useful for TV Shows: Apply same TMDB ID to all episodes in the folder</span>
+                    </div>
+                </label>
+            </div>
+
+            <div id="search-results" class="flex-1 overflow-y-auto p-6 space-y-4 bg-[#0a0a0a]">
+                <!-- Results will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOriginalPath = '';
+        let currentType = 'Movie';
+        let isScanning = false;
+        let statusInterval = null;
+        let allMediaData = []; 
+        let viewMode = 'grid'; // 'grid' or 'list'
+        let currentConfirmResolver = null;
+
+        function toggleSortDropdown() {
+            document.getElementById('sort-options').classList.toggle('hidden');
+        }
+
+        function setSort(val, label) {
+            document.getElementById('sort-select').value = val;
+            document.getElementById('current-sort-label').innerText = label;
+            
+            // Update icons
+            document.querySelectorAll('.check-icon').forEach(el => el.classList.add('opacity-0'));
+            const activeBtn = document.querySelector(`button[data-val="${val}"] .check-icon`);
+            if (activeBtn) activeBtn.classList.remove('opacity-0');
+            
+            document.getElementById('sort-options').classList.add('hidden');
+            filterAndSortMedia();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('sort-options');
+            const button = document.querySelector('button[onclick="toggleSortDropdown()"]');
+            // Check if elements exist before checking containment (to prevent errors during page load)
+            if (dropdown && button) {
+                if (!dropdown.classList.contains('hidden') && !dropdown.contains(e.target) && !button.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            }
+        });
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('w-64');
+            sidebar.classList.toggle('w-20');
+            const texts = document.querySelectorAll('.sidebar-text');
+            texts.forEach(t => t.classList.toggle('hidden'));
+        }
+
+        function switchTab(tabId) {
+            // Update UI
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            
+            // Update Nav
+            document.querySelectorAll('nav button').forEach(b => {
+                b.classList.remove('bg-gray-800/50', 'text-green-500', 'border-gray-700/50');
+                b.classList.add('text-gray-500');
+            });
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.classList.remove('text-gray-500');
+            activeBtn.classList.add('bg-gray-800/50', 'text-green-500', 'border-gray-700/50');
+
+            if (tabId === 'resources') loadMedia();
+            if (tabId === 'metrics') loadStats();
+            if (tabId === 'settings') loadConfig();
+            if (tabId === 'logs') loadLogs();
+        }
+
+        async function loadLogs() {
+            const tbody = document.getElementById('logs-table-body');
+            tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-10 text-center text-gray-500"><i class="fas fa-circle-notch fa-spin"></i> Loading...</td></tr>';
+            try {
+                const res = await fetch('/api/logs');
+                const logs = await res.json();
+                tbody.innerHTML = logs.map(log => `
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                        <td class="px-6 py-3 text-gray-500">${log.timestamp}</td>
+                        <td class="px-6 py-3 font-bold ${log.action_type === 'ERROR' ? 'text-red-500' : 'text-green-500'}">${log.action_type}</td>
+                        <td class="px-6 py-3 text-gray-300 truncate max-w-xs" title="${log.target}">${log.target}</td>
+                        <td class="px-6 py-3 text-gray-400 truncate max-w-md" title="${log.details}">${log.details || ''}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-10 text-center text-red-500">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        function showConfirm(msg, title = "Confirm Action", isAlert = false) {
+            document.getElementById('confirm-msg').innerText = msg;
+            document.getElementById('confirm-title').innerText = title;
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+            const icon = document.getElementById('confirm-icon');
+            
+            if (isAlert) {
+                cancelBtn.classList.add('hidden');
+                icon.innerHTML = '<i class="fas fa-info-circle text-2xl"></i>';
+                icon.className = 'w-16 h-16 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6';
+            } else {
+                cancelBtn.classList.remove('hidden');
+                icon.innerHTML = '<i class="fas fa-question text-2xl"></i>';
+                icon.className = 'w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6';
+            }
+
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            return new Promise(resolve => {
+                currentConfirmResolver = resolve;
+            });
+        }
+
+        function showAlert(msg, title = "Information") {
+            return showConfirm(msg, title, true);
+        }
+
+        function closeConfirm(result) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            if (currentConfirmResolver) currentConfirmResolver(result);
+        }
+
+        async function loadConfig() {
+            const res = await fetch('/api/config');
+            const data = await res.json();
+            document.getElementById('conf-source-dir').value = data.source_dir;
+            document.getElementById('conf-target-dir').value = data.target_dir;
+            document.getElementById('conf-tmdb-key').value = data.tmdb_api_key;
+            document.getElementById('conf-port').value = data.server_port;
+            document.getElementById('conf-interval').value = data.scan_interval_minutes;
+        }
+
+        async function saveConfig() {
+            if (!await showConfirm("Save configuration and reload server settings?")) return;
+            
+            const data = {
+                source_dir: document.getElementById('conf-source-dir').value,
+                target_dir: document.getElementById('conf-target-dir').value,
+                tmdb_api_key: document.getElementById('conf-tmdb-key').value,
+                server_port: parseInt(document.getElementById('conf-port').value),
+                scan_interval_minutes: parseInt(document.getElementById('conf-interval').value)
+            };
+            
+            const res = await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            
+            if (res.ok) showAlert('Configuration saved successfully.', 'System Config');
+        }
+
+        async function loadStats() {
+            const res = await fetch('/api/stats');
+            const data = await res.json();
+            document.getElementById('stat-total').innerText = data.total;
+            document.getElementById('stat-matched').innerText = data.matched;
+            document.getElementById('stat-uncertain').innerText = data.uncertain;
+            document.getElementById('stat-failed').innerText = data.failed;
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            // Update UI buttons
+            const btnList = document.getElementById('btn-view-list');
+            const btnGrid = document.getElementById('btn-view-grid');
+            
+            if (mode === 'list') {
+                btnList.classList.add('text-green-500', 'bg-gray-800', 'shadow-sm');
+                btnList.classList.remove('text-gray-600');
+                btnGrid.classList.remove('text-green-500', 'bg-gray-800', 'shadow-sm');
+                btnGrid.classList.add('text-gray-600');
+            } else {
+                btnGrid.classList.add('text-green-500', 'bg-gray-800', 'shadow-sm');
+                btnGrid.classList.remove('text-gray-600');
+                btnList.classList.remove('text-green-500', 'bg-gray-800', 'shadow-sm');
+                btnList.classList.add('text-gray-600');
+            }
+            filterAndSortMedia();
+        }
+
+        async function loadMedia(status = '') {
+            const list = document.getElementById('media-list');
+            list.innerHTML = '<div class="col-span-full text-center py-20 text-gray-500"><i class="fas fa-circle-notch fa-spin text-3xl mb-4"></i><br>加载中...</div>';
+            
+            try {
+                const res = await fetch(`/api/media?status=${status}`);
+                allMediaData = await res.json();
+                console.log("Raw Media Data:", allMediaData); // Debug log
+                filterAndSortMedia();
+            } catch (e) {
+                list.innerHTML = '<div class="col-span-full text-center py-20 text-red-500">加载失败: ' + e.message + '</div>';
+            }
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Subtle notification instead of alert
+                const btn = event.currentTarget;
+                const originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+                setTimeout(() => {
+                    btn.innerHTML = originalIcon;
+                }, 2000);
+            });
+        }
+
+        function filterAndSortMedia() {
+            const searchTerm = document.getElementById('global-search').value.toLowerCase();
+            const sortVal = document.getElementById('sort-select').value;
+            const list = document.getElementById('media-list');
+
+            // Aggregate data by TMDB ID
+            let aggregated = {};
+            let standalone = [];
+
+            allMediaData.forEach(item => {
+                const nameMatch = (item.title_cn || '').toLowerCase().includes(searchTerm) || 
+                                  (item.title_en || '').toLowerCase().includes(searchTerm) ||
+                                  (item.original_path || '').toLowerCase().includes(searchTerm);
+                if (!nameMatch) return;
+
+                // Robust type and ID check
+                const mType = String(item.media_type || '').toLowerCase();
+                const tmdbId = item.tmdb_id;
+                
+                if (tmdbId) {
+                    const key = `${mType.includes('movie') ? 'movie' : 'tv'}-${tmdbId}`;
+                    if (!aggregated[key]) {
+                        // For the main card, try to find a "clean" title from the target path if title_cn is missing
+                        let displayTitle = item.title_cn;
+                        if (!displayTitle && item.target_path) {
+                            const match = item.target_path.match(/\/(?:TV Shows|Movies)\/(.+?)\s*(?:\((.+?)\))?\s*\((\d{4})\)/);
+                            if (match) displayTitle = match[1];
+                        }
+                        if (!displayTitle) displayTitle = item.original_path.split('/').slice(-1)[0];
+
+                        aggregated[key] = {
+                            ...item,
+                            title_cn: displayTitle,
+                            episodes: [] // We use "episodes" as a generic list for movies too (e.g. multiple m2ts parts)
+                        };
+                    }
+                    aggregated[key].episodes.push(item);
+                } else {
+                    standalone.push(item);
+                }
+            });
+
+            let finalData = [...Object.values(aggregated), ...standalone];
+
+            finalData.sort((a, b) => {
+                if (sortVal === 'time_desc') return new Date(b.created_at) - new Date(a.created_at);
+                if (sortVal === 'time_asc') return new Date(a.created_at) - new Date(b.created_at);
+                if (sortVal === 'name_asc') {
+                    const nameA = a.title_cn || a.original_path.split('/').pop();
+                    const nameB = b.title_cn || b.original_path.split('/').pop();
+                    return nameA.localeCompare(nameB, 'zh-CN');
+                }
+                if (sortVal === 'type_asc') return a.media_type.localeCompare(b.media_type);
+                return 0;
+            });
+
+            if (finalData.length === 0) {
+                list.innerHTML = '<div class="col-span-full text-center py-20 text-gray-500">未找到匹配项</div>';
+                return;
+            }
+
+            renderMedia(finalData);
+        }
+
+        function toggleEpisodes(tmdbId) {
+            const el = document.getElementById(`episodes-${tmdbId}`);
+            const icon = document.getElementById(`icon-${tmdbId}`);
+            el.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        }
+
+        function renderMedia(data) {
+            const list = document.getElementById('media-list');
+            if (viewMode === 'grid') {
+                list.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6";
+                list.innerHTML = data.map(item => `
+                    <div class="bg-[#111] border border-gray-800 rounded-xl overflow-hidden hover:border-green-500/30 transition-all group shadow-lg flex flex-col">
+                        <div class="p-5 flex-1">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex flex-col space-y-1">
+                                    <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wider uppercase ${item.media_type.toLowerCase().includes('movie') ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}">
+                                        ${item.media_type}
+                                    </span>
+                                    <div class="flex items-center space-x-1 group/tmdb">
+                                        <span class="text-[10px] font-mono font-bold text-green-500/80 tracking-tighter">TMDB: ${item.tmdb_id || 'NOT_FOUND'}</span>
+                                        ${item.tmdb_id ? `
+                                            <button onclick="copyText('${item.tmdb_id}')" class="opacity-0 group-hover/tmdb:opacity-100 text-gray-600 hover:text-green-500 transition-all"><i class="far fa-copy text-[8px]"></i></button>
+                                            <a href="https://www.themoviedb.org/${item.media_type.toLowerCase().includes('movie') ? 'movie' : 'tv'}/${item.tmdb_id}" target="_blank" class="opacity-0 group-hover/tmdb:opacity-100 text-gray-600 hover:text-green-500 transition-all ml-1" title="View on TMDB">
+                                                <i class="fas fa-external-link-alt text-[8px]"></i>
+                                            </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-1.5 h-1.5 rounded-full ${item.search_status === 'found' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : (item.search_status === 'hidden' ? 'bg-gray-500' : 'bg-yellow-500')}"></div>
+                                    <span class="text-[10px] font-medium text-gray-500 uppercase tracking-widest">
+                                        ${item.search_status === 'found' ? 'Matched' : (item.search_status === 'hidden' ? 'Hidden' : 'Pending')}
+                                    </span>
+                                </div>
+                            </div>
+                            <h4 class="font-semibold text-white mb-1 truncate text-sm" title="${item.original_path.split('/').pop()}">
+                                ${item.title_cn || item.original_path.split('/').pop()}
+                            </h4>
+                            <p class="text-gray-500 text-[11px] mb-6 truncate font-mono">${item.title_en || '---'}</p>
+                            
+                            <div class="space-y-2.5 mb-6">
+                                <div class="flex items-center text-[11px] text-gray-600 group-hover:text-gray-400 transition-colors">
+                                    <i class="fas fa-folder w-4"></i>
+                                    <span class="truncate ml-2 cursor-help" title="${item.original_path}">${item.original_path}</span>
+                                    <button onclick="copyText('${item.original_path.replace(/'/g, "\\'")}')" class="ml-2 hover:text-green-500 transition-colors" title="Copy path">
+                                        <i class="far fa-copy text-[10px]"></i>
+                                    </button>
+                                </div>
+                                ${item.target_path ? `
+                                <div class="flex items-center text-[11px] text-green-500/70">
+                                    <i class="fas fa-link w-4"></i>
+                                    <span class="truncate ml-2 cursor-help" title="${item.target_path}">${item.target_path}</span>
+                                    <button onclick="copyText('${item.target_path.replace(/'/g, "\\'")}')" class="ml-2 hover:text-white transition-colors" title="Copy path">
+                                        <i class="far fa-copy text-[10px]"></i>
+                                    </button>
+                                </div>` : ''}
+                            </div>
+                        </div>
+
+                        ${item.episodes && item.episodes.length > 1 ? `
+                        <div class="border-t border-gray-800/50">
+                            <button onclick="toggleEpisodes('${item.tmdb_id}')" class="w-full px-5 py-3 flex items-center justify-between text-[10px] font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest bg-black/20">
+                                <span>${item.episodes.length} ${item.media_type.toLowerCase().includes('movie') ? 'Parts' : 'Episodes'}</span>
+                                <i id="icon-${item.tmdb_id}" class="fas fa-chevron-down transition-transform"></i>
+                            </button>
+                            <div id="episodes-${item.tmdb_id}" class="hidden bg-black/40 border-t border-gray-800/50 p-4 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                ${item.episodes.map(ep => `
+                                    <div class="flex items-center justify-between text-[10px] group/ep">
+                                        <span class="text-gray-600 truncate mr-4">${ep.original_path.split('/').pop()}</span>
+                                        <i class="fas fa-check text-green-500/50"></i>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <div class="p-5 pt-4 border-t border-gray-800/50 bg-[#0d0d0d]/50">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-700 font-mono">${item.created_at.split(' ')[0]}</span>
+                                <div class="flex items-center space-x-2">
+                                    <div class="flex items-center space-x-2">
+                                        ${item.search_status === 'hidden' ? `
+                                        <button onclick="unhideMedia('${item.original_path.replace(/'/g, "\\'")}')"
+                                                class="text-gray-700 hover:text-green-500 text-[10px] transition-colors flex items-center" title="Unhide Item">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        ` : `
+                                        <button onclick="hideMedia('${item.original_path.replace(/'/g, "\\'")}')"
+                                                class="text-gray-700 hover:text-red-500 text-[10px] transition-colors flex items-center" title="Hide Item">
+                                            <i class="fas fa-eye-slash"></i>
+                                        </button>
+                                        `}
+                                        <button onclick="openSearch('${item.original_path.replace(/'/g, "\\'")}', '${item.media_type}')" 
+                                                class="text-green-500 hover:text-green-400 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center">
+                                            Manual Match <i class="fas fa-chevron-right ml-1 text-[8px]"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                // List view implementation for aggregated data
+                list.className = "bg-[#111] border border-gray-800 rounded-xl overflow-hidden shadow-xl";
+                list.innerHTML = `
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-[#181818] border-b border-gray-800 text-gray-500 uppercase tracking-widest font-bold">
+                                <th class="px-6 py-4">Status</th>
+                                <th class="px-6 py-4">Resource Name</th>
+                                <th class="px-6 py-4">Type</th>
+                                <th class="px-6 py-4 hidden md:table-cell">Path</th>
+                                <th class="px-6 py-4">Created At</th>
+                                <th class="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800/50">
+                            ${data.map(item => `
+                                <tr class="hover:bg-white/[0.02] transition-colors group">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-1.5 h-1.5 rounded-full ${item.search_status === 'found' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : (item.search_status === 'hidden' ? 'bg-gray-500' : 'bg-yellow-500')}"></div>
+                                            <span class="text-[10px] text-gray-600">${item.search_status === 'found' ? 'OK' : (item.search_status === 'hidden' ? 'Hidden' : '??')}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex flex-col">
+                                            <div class="flex items-center">
+                                                <span class="text-gray-200 font-medium">${item.title_cn || item.original_path.split('/').pop()}</span>
+                                                ${item.episodes ? `<span class="ml-2 px-1.5 py-0.5 rounded-full bg-gray-800 text-[9px] text-gray-500">${item.episodes.length}</span>` : ''}
+                                            </div>
+                                            <span class="text-gray-600 text-[10px] mt-0.5 font-mono">${item.title_en || '---'}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex flex-col">
+                                            <span class="px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase ${item.media_type.toLowerCase().includes('movie') ? 'text-purple-400 bg-purple-500/5' : 'text-green-400 bg-green-500/5'} border border-current/10">
+                                                ${item.media_type}
+                                            </span>
+                                            <span class="text-[8px] font-mono text-gray-700 mt-1">ID: ${item.tmdb_id || '---'}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 hidden md:table-cell">
+                                        <div class="flex items-center space-x-2 max-w-xs">
+                                            <span class="truncate text-gray-600 text-[10px] group-hover:text-gray-400 transition-colors cursor-help" title="${item.original_path}">
+                                                ${item.original_path}
+                                            </span>
+                                            <button onclick="copyText('${item.original_path.replace(/'/g, "\\'")}')" class="text-gray-700 hover:text-green-500 transition-colors">
+                                                <i class="far fa-copy text-[9px]"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-600 font-mono text-[10px]">
+                                        ${item.created_at}
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="flex items-center justify-end space-x-3">
+                                            ${item.search_status === 'hidden' ? `
+                                            <button onclick="unhideMedia('${item.original_path.replace(/'/g, "\\'")}')" 
+                                                    class="text-gray-600 hover:text-green-500 transition-colors" title="Unhide Item">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            ` : `
+                                            <button onclick="hideMedia('${item.original_path.replace(/'/g, "\\'")}')" 
+                                                    class="text-gray-600 hover:text-red-500 transition-colors" title="Hide Item">
+                                                <i class="fas fa-eye-slash"></i>
+                                            </button>
+                                            `}
+                                            <button onclick="openSearch('${item.original_path.replace(/'/g, "\\'")}', '${item.media_type}')" 
+                                                    class="text-gray-600 hover:text-green-500 transition-colors">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+        }
+
+        function openSearch(path, type) {
+            currentOriginalPath = path;
+            currentType = type;
+            const modal = document.getElementById('search-modal');
+            const input = document.getElementById('search-input');
+            const results = document.getElementById('search-results');
+            
+            document.getElementById('modal-path').innerText = path;
+            input.value = path.split('/').pop();
+            results.innerHTML = '<div class="text-center py-10 text-gray-500 font-mono text-[10px] uppercase tracking-widest">Ready for search</div>';
+            modal.classList.remove('hidden');
+        }
+
+        async function searchTMDB() {
+            const query = document.getElementById('search-input').value;
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '<div class="text-center py-10 text-gray-600 font-mono text-xs uppercase tracking-widest animate-pulse">Searching TMDB Intelligence...</div>';
+            
+            try {
+                const res = await fetch(`/api/search?name=${encodeURIComponent(query)}&type=${currentType}`);
+                const data = await res.json();
+                
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = '<div class="text-center py-10 text-gray-500 text-xs">NO RESULTS FOUND</div>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = data.map(res => `
+                    <div class="bg-[#151515] border border-gray-800 rounded-lg p-4 flex space-x-4 hover:border-green-500/30 transition-all group">
+                        <img src="${res.poster_path ? 'https://image.tmdb.org/t/p/w200' + res.poster_path : 'https://via.placeholder.com/200x300?text=No+Poster'}" 
+                             class="w-16 h-24 object-cover rounded shadow-lg">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h4 class="text-white font-bold text-sm truncate">${res.title_cn}</h4>
+                                <span class="text-green-500 font-mono text-[10px] ml-2">${res.year || '----'}</span>
+                            </div>
+                            <p class="text-gray-500 text-[10px] mt-1 italic truncate font-mono">${res.title_en || ''}</p>
+                            <p class="text-gray-600 text-[10px] mt-3 line-clamp-2 leading-relaxed">${res.overview || 'No overview available.'}</p>
+                            <button onclick='confirmMatch(${JSON.stringify(res).replace(/'/g, "&apos;")})' 
+                                    class="mt-4 text-green-500 hover:text-green-400 text-[10px] font-bold uppercase tracking-widest transition-colors">
+                                Select This Match <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                resultsDiv.innerHTML = '<div class="text-center py-10 text-red-500 text-xs font-mono">CONNECTION ERROR</div>';
+            }
+        }
+
+        function closeSearch() {
+            document.getElementById('search-modal').classList.add('hidden');
+        }
+
+        async function confirmMatch(selection) {
+            const currentSearchTerm = document.getElementById('search-input').value;
+            const applyBatch = document.getElementById('apply-batch-checkbox').checked;
+            
+            let confirmMsg = `Confirm matching to: ${selection.title_cn}?`;
+            if (applyBatch) {
+                confirmMsg += `\n\n(Batch Mode: This will apply to all files in the same directory)`;
+            }
+
+            if (!await showConfirm(confirmMsg)) return;
+            
+            try {
+                const res = await fetch('/api/confirm', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        original_path: currentOriginalPath,
+                        selection: selection,
+                        type: currentType,
+                        alias: currentSearchTerm,
+                        apply_batch: applyBatch
+                    })
+                });
+                
+                if (res.ok) {
+                    const respData = await res.json();
+                    closeSearch();
+                    
+                    if (applyBatch && respData.processed_count > 1) {
+                         showAlert(`Batch Matched ${respData.processed_count} files successfully!`, 'Batch Complete');
+                         // For batch, simplest is to reload all data to reflect multiple updates
+                         loadMedia();
+                    } else {
+                        // Update local data without reload (Single item optimization)
+                        const itemIndex = allMediaData.findIndex(i => i.original_path === currentOriginalPath);
+                        if (itemIndex !== -1) {
+                            allMediaData[itemIndex] = {
+                                ...allMediaData[itemIndex],
+                                title_cn: selection.title_cn,
+                                title_en: selection.title_en,
+                                tmdb_id: selection.tmdb_id,
+                                year: selection.year,
+                                media_type: currentType, 
+                                search_status: 'found'
+                            };
+                            filterAndSortMedia();
+                            showAlert(`Matched "${allMediaData[itemIndex].title_cn}" successfully.`, 'Match Confirmed');
+                        } else {
+                            loadMedia();
+                        }
+                    }
+                }
+            } catch (e) {
+                showAlert('Match failed: ' + e.message, 'Match Error');
+            }
+        }
+
+        async function resetSystem() {
+            if (!await showConfirm("WARNING: This will delete the database and all organized symlinks. Original files will NOT be affected. Continue?", "DANGER: Reset System")) return;
+            
+            const res = await fetch('/api/reset', {method: 'POST'});
+            if (res.ok) {
+                showAlert('System reset successful. Database and links cleared.', 'Reset Complete');
+                allMediaData = [];
+                filterAndSortMedia();
+            } else {
+                const err = await res.json();
+                showAlert('Reset failed: ' + err.error, 'Reset Error');
+            }
+        }
+
+        async function hideMedia(path) {
+            if (!await showConfirm("Hide this item? It will be removed from Infuse target folder.", "Hide Media")) return;
+            
+            try {
+                const res = await fetch('/api/media/hide', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ original_path: path })
+                });
+                
+                if (res.ok) {
+                    // Update UI locally
+                    allMediaData = allMediaData.filter(i => i.original_path !== path);
+                    filterAndSortMedia();
+                    showAlert("Item hidden successfully.", "Success");
+                } else {
+                    const err = await res.json();
+                    showAlert("Failed to hide: " + err.error, "Error");
+                }
+            } catch (e) {
+                showAlert("Error: " + e.message, "Error");
+            }
+        }
+
+        async function unhideMedia(path) {
+            if (!await showConfirm("Unhide this item? It will be processed again in next scan.", "Unhide Media")) return;
+            
+            try {
+                const res = await fetch('/api/media/unhide', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ original_path: path })
+                });
+                
+                if (res.ok) {
+                    // Update UI locally: change status to pending
+                    const item = allMediaData.find(i => i.original_path === path);
+                    if (item) item.search_status = 'pending';
+                    filterAndSortMedia();
+                    showAlert("Item unhidden successfully. It will be re-scanned shortly.", "Success");
+                } else {
+                    const err = await res.json();
+                    showAlert("Failed to unhide: " + err.error, "Error");
+                }
+            } catch (e) {
+                showAlert("Error: " + e.message, "Error");
+            }
+        }
+
+        async function triggerScan() {
+            const res = await fetch('/api/scan', {method: 'POST'});
+            if (res.ok) {
+                showAlert('Scan task started in background', 'Task Started');
+                startStatusPolling();
+            } else {
+                const err = await res.json();
+                showAlert('Failed: ' + err.error, 'Task Error');
+            }
+        }
+
+        async function triggerIncrementalScan() {
+            const res = await fetch('/api/scan/incremental', {method: 'POST'});
+            if (res.ok) {
+                showAlert('Incremental scan started', 'Task Started');
+                startStatusPolling();
+            } else {
+                const err = await res.json();
+                showAlert('Failed: ' + err.error, 'Task Error');
+            }
+        }
+
+        async function triggerReprocess() {
+            const res = await fetch('/api/reprocess', {method: 'POST'});
+            if (res.ok) {
+                showAlert('Reprocess task started', 'Task Started');
+                startStatusPolling();
+            } else {
+                const err = await res.json();
+                showAlert('Failed: ' + err.error, 'Task Error');
+            }
+        }
+
+        function startStatusPolling() {
+            if (statusInterval) return;
+            isScanning = true;
+            statusInterval = setInterval(checkStatus, 2000);
+        }
+
+        async function checkStatus() {
+            const res = await fetch('/api/status');
+            const tasks = await res.json();
+            const prog = document.getElementById('task-progress');
+            
+            let activeTask = tasks['full_scan'] || tasks['scheduled_scan'] || tasks['reprocess_unknown'] || tasks['incremental_scan'];
+            if (activeTask && activeTask.status === 'running') {
+                prog.classList.remove('hidden');
+                document.getElementById('task-msg').innerText = activeTask.message;
+                document.getElementById('task-bar').style.width = activeTask.progress + '%';
+            } else {
+                prog.classList.add('hidden');
+                if (statusInterval) {
+                    clearInterval(statusInterval);
+                    statusInterval = null;
+                }
+                if (isScanning && activeTask && activeTask.status === 'completed') {
+                    isScanning = false;
+                    setTimeout(() => loadMedia(), 1000);
+                }
+            }
+        }
+
+        // Initial check once on load to see if a scan is already running
+        checkStatus();
+        loadMedia();
+    </script>
+</body>
+</html>
