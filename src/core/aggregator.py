@@ -2,8 +2,9 @@
 
 from pathlib import Path
 import re
-from typing import List, Dict, Optional, Tuple
-from .models import MediaFile, MediaItem, MediaType
+from typing import Dict, List, Optional
+
+from .models import MediaFile, MediaItem
 from pypinyin import lazy_pinyin
 
 
@@ -12,8 +13,12 @@ class Aggregator:
     Groups MediaFiles into MediaItems using advanced heuristics.
     """
 
-    def __init__(self, source_root: Path):
+    def __init__(self, source_root: Path, subtitle_extensions: Optional[List[str]] = None):
         self.source_root = source_root
+        self.subtitle_extensions = {
+            ext.lower()
+            for ext in (subtitle_extensions or [".srt", ".ass", ".ssa", ".sub", ".vtt"])
+        }
 
     def _get_pinyin_prefix(self, name: str) -> str:
         """
@@ -47,8 +52,14 @@ class Aggregator:
         for media_file in files:
             try:
                 rel_path = media_file.path.relative_to(self.source_root)
-                top_level_name = rel_path.parts[0]
-                item_root = self.source_root / top_level_name
+                if len(rel_path.parts) == 1:
+                    base_name = media_file.path.stem
+                    if media_file.extension.lower() in self.subtitle_extensions:
+                        base_name = re.sub(r"\.[a-z]{2,3}$", "", base_name, flags=re.IGNORECASE)
+                    item_root = self.source_root / base_name
+                else:
+                    top_level_name = rel_path.parts[0]
+                    item_root = self.source_root / top_level_name
                 if item_root not in top_level_groups:
                     top_level_groups[item_root] = []
                 top_level_groups[item_root].append(media_file)
@@ -58,14 +69,21 @@ class Aggregator:
         final_items: List[MediaItem] = []
 
         for item_root, item_files in top_level_groups.items():
+            content_files = [
+                f for f in item_files if f.extension.lower() not in self.subtitle_extensions
+            ]
             # Check for "Movie Series" inside a folder
             # Criteria: Multiple files, none have season markers, but they have different years
-            has_season_markers = any(self._extract_episode_markers(f.path.name) for f in item_files)
-            years = {self._get_year(f.path.name) for f in item_files if self._get_year(f.path.name)}
+            has_season_markers = any(
+                self._extract_episode_markers(f.path.name) for f in content_files
+            )
+            years = {
+                self._get_year(f.path.name) for f in content_files if self._get_year(f.path.name)
+            }
             
-            if not has_season_markers and len(years) > 1 and len(item_files) > 1:
+            if not has_season_markers and len(years) > 1 and len(content_files) > 1:
                 # Treat each file as a separate Movie MediaItem
-                for f in item_files:
+                for f in content_files:
                     final_items.append(MediaItem(
                         name=f.path.stem,
                         original_path=f.path,
@@ -82,9 +100,19 @@ class Aggregator:
                 pass
             
             # Default: one folder = one item
+            representative_path = item_root
+            if not item_root.exists() and item_files:
+                video_candidates = [
+                    f
+                    for f in item_files
+                    if f.extension.lower() not in self.subtitle_extensions
+                ]
+                representative_path = (
+                    (video_candidates[0].path if video_candidates else item_files[0].path)
+                )
             final_items.append(MediaItem(
                 name=item_root.name,
-                original_path=item_root,
+                original_path=representative_path,
                 files=item_files,
             ))
 
@@ -94,7 +122,12 @@ class Aggregator:
         standalone_items: List[MediaItem] = []
 
         for item in final_items:
-            has_tv_marker = any(self._extract_episode_markers(f.path.name) for f in item.files)
+            content_files = [
+                f for f in item.files if f.extension.lower() not in self.subtitle_extensions
+            ]
+            has_tv_marker = any(
+                self._extract_episode_markers(f.path.name) for f in content_files
+            )
             if has_tv_marker:
                 pinyin_key = self._get_pinyin_prefix(item.name)
                 if pinyin_key in merged_items:

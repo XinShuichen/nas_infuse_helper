@@ -10,6 +10,7 @@ class Config(BaseModel):
     target_dir: Path
     database_path: Path
     video_extensions: List[str]
+    subtitle_extensions: List[str] = [".srt", ".ass", ".ssa", ".sub", ".vtt"]
     tmdb_api_key: Optional[str] = None
     server_port: int = 5000
     server_host: str = "0.0.0.0"

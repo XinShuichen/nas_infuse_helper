@@ -88,7 +88,7 @@ def test_scan_service_process_paths_filtering(temp_env):
     # If it was called, it should be for the video
     if match_service.process_item.called:
         item = match_service.process_item.call_args[0][0]
-        assert item.name == "movie.mp4"
+        assert item.name == "movie"
         assert len(item.files) == 1
         assert item.files[0].path.name == "movie.mp4"
 

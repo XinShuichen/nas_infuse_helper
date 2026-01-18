@@ -124,8 +124,6 @@ class Searcher:
         """
         Wrapper for GET requests with rate limit handling and retries.
         """
-        import requests.adapters
-        
         retry_count = 0
         while retry_count <= max_retries:
             try:
@@ -171,11 +169,14 @@ class Searcher:
 
     def search(self, item: MediaItem) -> MediaItem:
         # 0. Check for Forced TMDB ID in file path (including parent folders)
-        # Pattern: {tmdb-12345}, {tmdb-tv-12345}, {tmdb-movie-12345}
-        # We check from the file/folder name upwards
+        # Pattern: {tmdb-12345}, [tmdb-12345], (tmdb-12345)
+        # Also supports tmdbid- prefix
         path_parts = list(reversed(item.original_path.parts))
         for part in path_parts:
-            match = re.search(r'\{tmdb-(?:(tv|movie)-)?(\d+)\}', part, re.IGNORECASE)
+            # Regex to match tmdb-12345 or tmdbid-12345 enclosed in {}, [], or ()
+            # Group 1: Optional type (tv/movie)
+            # Group 2: ID
+            match = re.search(r'(?:\{|\[|\()(?:tmdb|tmdbid)-(?:(tv|movie)-)?(\d+)(?:\}|\]|\))', part, re.IGNORECASE)
             if match:
                 type_prefix = match.group(1) # 'tv' or 'movie' or None
                 tmdb_id_str = match.group(2)
@@ -188,6 +189,27 @@ class Searcher:
                 print(f"Found Forced TMDB ID in path: '{part}' -> Using alias '{forced_alias}'")
                 item.alias = forced_alias
                 break
+
+        if item.media_type == MediaType.MOVIE and "BDMV" in str(item.original_path):
+            print(
+                f"BDMV structure detected for {item.name}. Attempting to deduce Movie Name from path..."
+            )
+            parts = list(reversed(item.original_path.parts))
+            bdmv_idx = -1
+            try:
+                bdmv_idx = parts.index("BDMV")
+            except ValueError:
+                bdmv_idx = -1
+
+            if bdmv_idx != -1 and bdmv_idx + 1 < len(parts):
+                candidate = parts[bdmv_idx + 1]
+                if re.match(r"^(Disc|Disk|Part|CD)\s*\d+$", candidate, re.IGNORECASE):
+                    if bdmv_idx + 2 < len(parts):
+                        item.name = parts[bdmv_idx + 2]
+                        print(f"Deduced Movie Name: {item.name}")
+                else:
+                    item.name = candidate
+                    print(f"Deduced Movie Name: {item.name}")
 
         # Detect season if not already set
         if item.season is None:

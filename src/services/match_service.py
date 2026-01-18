@@ -32,7 +32,12 @@ class MatchService:
                 item.title_cn = existing.get("title_cn")
                 item.title_en = existing.get("title_en")
                 item.year = existing.get("year")
-                item.media_type = MediaType(existing.get("type")) if existing.get("type") else item.media_type
+                stored_media_type = existing.get("media_type")
+                if stored_media_type:
+                    try:
+                        item.media_type = MediaType(stored_media_type)
+                    except ValueError:
+                        pass
                 item.search_status = "found"
                 return item
 

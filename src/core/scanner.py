@@ -14,14 +14,17 @@ class Scanner:
     def __init__(
         self,
         video_extensions: List[str],
+        subtitle_extensions: List[str] = None,
         blacklist: List[str] = None,
     ):
         self.video_extensions = {ext.lower() for ext in video_extensions}
+        self.subtitle_extensions = {ext.lower() for ext in (subtitle_extensions or [])}
+        self.allowed_extensions = self.video_extensions.union(self.subtitle_extensions)
         self.blacklist = set(blacklist) if blacklist else {"#recycle", "@eaDir", ".DS_Store"}
 
     def scan(self, root_path: Path) -> List[MediaFile]:
         """
-        Recursively scans the root_path for allowed video files.
+        Recursively scans the root_path for allowed video and subtitle files.
         """
         media_files = []
         if not root_path.exists():
@@ -36,8 +39,8 @@ class Scanner:
                     continue
                 path = Path(root) / file
                 ext = path.suffix.lower()
-                # Only include video files based on user requirement
-                if ext in self.video_extensions:
+                # Include video and subtitle files
+                if ext in self.allowed_extensions:
                     stat = path.stat() if path.exists() else None
                     media_files.append(
                         MediaFile(

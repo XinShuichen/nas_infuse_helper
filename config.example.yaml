@@ -13,5 +13,6 @@ tmdb_api_key: "YOUR_TMDB_API_KEY"
 server_port: 5000
 scan_interval_minutes: 60
 video_extensions: [".mp4", ".mkv", ".avi", ".mov", ".iso"]
+subtitle_extensions: [".srt", ".ass", ".ssa", ".sub", ".vtt"]
 verbose: false
 database_path: "media.db"

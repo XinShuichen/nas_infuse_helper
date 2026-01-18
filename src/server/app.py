@@ -283,7 +283,10 @@ class Server:
             # We need MediaFile to wrap single file
             from ..core.models import MediaFile
             
-            scanner = Scanner(self.config.video_extensions)
+            subtitle_extensions = getattr(self.config, "subtitle_extensions", [])
+            if not isinstance(subtitle_extensions, (list, tuple, set)):
+                subtitle_extensions = []
+            scanner = Scanner(self.config.video_extensions, subtitle_extensions=list(subtitle_extensions))
             
             items_to_process = [] # List of MediaItem
             

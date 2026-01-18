@@ -33,6 +33,15 @@ class Classifier:
             item.media_type = MediaType.MOVIE
             return item
 
+        path_parts = list(reversed(item.original_path.parts))
+        start_idx = 1 if item.original_path.is_file() else 0
+        
+        for part in path_parts[start_idx:]:
+            if re.search(r'\b(Season|S)\s*\d+\b', part, re.IGNORECASE) or \
+               re.search(r'第\s*\d+\s*[季部]', part):
+                item.media_type = MediaType.TV_SHOW
+                break
+
         if len(video_files) > 1:
             # Check if multiple files look like episodes
             episode_count = 0
@@ -44,11 +53,26 @@ class Classifier:
 
             if episode_count > 1:
                 item.media_type = MediaType.TV_SHOW
+            # If we already detected it as TV Show via folder, keep it as TV Show
+            elif item.media_type == MediaType.TV_SHOW:
+                pass
             else:
                 # Could be a movie with extras or multiple parts
                 item.media_type = MediaType.MOVIE
         elif len(video_files) == 1:
-            item.media_type = MediaType.MOVIE
+            # If not already detected as TV Show via folder, check file name
+            if item.media_type != MediaType.TV_SHOW:
+                f = video_files[0]
+                is_episode = False
+                for pattern in self.episode_patterns:
+                    if pattern.search(f.path.name):
+                        is_episode = True
+                        break
+                
+                if is_episode:
+                    item.media_type = MediaType.TV_SHOW
+                else:
+                    item.media_type = MediaType.MOVIE
         else:
             item.media_type = MediaType.UNKNOWN
 

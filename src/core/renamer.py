@@ -126,42 +126,47 @@ class Renamer:
             clean_item_name = self.sanitize_for_samba(self.clean_name(item.name))
 
         if item.media_type == MediaType.MOVIE:
-            # Movies/MovieName/OriginalFileName
             return Path("Movies") / clean_item_name / self.sanitize_for_samba(file.path.name)
 
         if item.media_type == MediaType.TV_SHOW:
-            # Use item's season/episode if available (e.g. from manual assignment or previous classification)
-            # Otherwise try to extract from filename
             season = item.season
             episode = item.episode
-            
-            if season is None or episode is None:
-                extracted_season, extracted_episode = self.extract_episode_info(file.path.name)
-                season = season or extracted_season
-                episode = episode or extracted_episode
 
-            # If not found in filename, check parent folder names
-            if season is None or episode is None:
+            extracted_season, extracted_episode = self.extract_episode_info(file.path.name)
+            final_season = extracted_season if extracted_season is not None else season
+            final_episode = extracted_episode if extracted_episode is not None else episode
+
+            if final_season is None or final_episode is None:
                 parent_season, parent_episode = self.extract_episode_info(str(file.path.parent))
-                season = season or parent_season or 1
-                episode = episode or parent_episode
+                final_season = final_season or parent_season or 1
+                final_episode = final_episode or parent_episode
 
-            season_str = f"Season {season if season else 1}"
+            season_str = f"Season {final_season if final_season else 1}"
 
-            if episode is not None:
-                # S01E01.ext
-                s_e_part = f"S{season if season else 1:02d}E{episode:02d}"
-                
-                # Prepend English title if available
-                if item.title_en:
-                    clean_title_en = self.sanitize_for_samba(item.title_en)
-                    new_filename = f"{clean_title_en} {s_e_part}{file.extension}"
-                else:
-                    new_filename = f"{s_e_part}{file.extension}"
-                
-                return Path("TV Shows") / clean_item_name / season_str / new_filename
+            if final_episode is None:
+                return Path("TV Shows") / clean_item_name / season_str / self.sanitize_for_samba(
+                    file.path.name
+                )
+
+            s_e_part = f"S{final_season if final_season else 1:02d}E{final_episode:02d}"
+            is_subtitle = file.extension.lower() in [".srt", ".ass", ".ssa", ".sub", ".vtt"]
+            suffix = file.extension
+
+            if is_subtitle:
+                lang_match = re.search(
+                    r"\.([a-z]{2,3})\.(srt|ass|ssa|sub|vtt)$",
+                    file.path.name,
+                    re.IGNORECASE,
+                )
+                if lang_match:
+                    suffix = f".{lang_match.group(1)}{file.extension}"
+
+            if item.title_en:
+                clean_title_en = self.sanitize_for_samba(item.title_en)
+                new_filename = f"{clean_title_en} {s_e_part}{suffix}"
             else:
-                # Keep original name if episode cannot be determined
-                return Path("TV Shows") / clean_item_name / season_str / self.sanitize_for_samba(file.path.name)
+                new_filename = f"{s_e_part}{suffix}"
+
+            return Path("TV Shows") / clean_item_name / season_str / new_filename
 
         return Path("Unknown") / self.sanitize_for_samba(file.path.name)

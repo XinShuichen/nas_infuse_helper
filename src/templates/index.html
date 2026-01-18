@@ -553,6 +553,9 @@
                 const mType = String(item.media_type || '').toLowerCase();
                 const tmdbId = item.tmdb_id;
                 
+                // Helper to check if it's a subtitle
+                const isSubtitle = (path) => /\.(srt|ass|ssa|sub|vtt)$/i.test(path);
+
                 if (tmdbId) {
                     const key = `${mType.includes('movie') ? 'movie' : 'tv'}-${tmdbId}`;
                     if (!aggregated[key]) {
@@ -567,10 +570,15 @@
                         aggregated[key] = {
                             ...item,
                             title_cn: displayTitle,
-                            episodes: [] // We use "episodes" as a generic list for movies too (e.g. multiple m2ts parts)
+                            episodes: [], // We use "episodes" as a generic list for movies too (e.g. multiple m2ts parts)
+                            subtitles: [] // New subtitle list
                         };
                     }
-                    aggregated[key].episodes.push(item);
+                    if (isSubtitle(item.original_path)) {
+                        aggregated[key].subtitles.push(item);
+                    } else {
+                        aggregated[key].episodes.push(item);
+                    }
                 } else if (mType.includes('tv') || mType.includes('show')) {
                     // TV Show without ID -> Aggregate by Folder
                     // This fixes the issue where unmatched episodes appear as scattered cards
@@ -585,10 +593,15 @@
                              title_en: parentDir,  // Show path as subtitle
                              tmdb_id: '',          // No ID
                              episodes: [],
+                             subtitles: [],
                              is_folder_group: true
                          };
                     }
-                    aggregated[key].episodes.push(item);
+                    if (isSubtitle(item.original_path)) {
+                        aggregated[key].subtitles.push(item);
+                    } else {
+                        aggregated[key].episodes.push(item);
+                    }
                 } else {
                     standalone.push(item);
                 }
@@ -693,6 +706,22 @@
                                     <div class="flex items-center justify-between text-[10px] group/ep">
                                         <span class="text-gray-600 truncate mr-4">${ep.original_path.split('/').pop()}</span>
                                         <i class="fas fa-check text-green-500/50"></i>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${item.subtitles && item.subtitles.length > 0 ? `
+                        <div class="border-t border-gray-800/50">
+                            <div class="px-5 py-2 flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-black/10">
+                                <span>${item.subtitles.length} Subtitles</span>
+                            </div>
+                            <div class="bg-black/20 p-4 space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+                                ${item.subtitles.map(sub => `
+                                    <div class="flex items-center justify-between text-[10px] group/sub">
+                                        <span class="text-gray-600 truncate mr-4" title="${sub.original_path}">${sub.original_path.split('/').pop()}</span>
+                                        <i class="fas fa-closed-captioning text-blue-500/50"></i>
                                     </div>
                                 `).join('')}
                             </div>

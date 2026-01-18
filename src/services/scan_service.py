@@ -18,8 +18,13 @@ class ScanService:
         self.match_service = match_service
         self.link_service = link_service
         
-        self.scanner = Scanner(config.video_extensions)
-        self.aggregator = Aggregator(config.source_dir)
+        subtitle_extensions = getattr(config, "subtitle_extensions", [])
+        if not isinstance(subtitle_extensions, (list, tuple, set)):
+            subtitle_extensions = []
+        self.scanner = Scanner(config.video_extensions, subtitle_extensions=list(subtitle_extensions))
+        self.aggregator = Aggregator(
+            config.source_dir, subtitle_extensions=list(subtitle_extensions)
+        )
         self.classifier = Classifier(config.video_extensions)
         self.renamer = Renamer()
 
@@ -30,12 +35,18 @@ class ScanService:
         from pathlib import Path
         from src.core.models import MediaFile
         
+        video_exts = set(getattr(self.config, "video_extensions", []) or [])
+        subtitle_exts = getattr(self.config, "subtitle_extensions", [])
+        if not isinstance(subtitle_exts, (list, tuple, set)):
+            subtitle_exts = []
+        subtitle_exts = set(subtitle_exts)
+
         # Convert paths to MediaFiles
         media_files = []
         for p in paths:
             if isinstance(p, MediaFile):
                 # Double check extension for MediaFile objects too (safety net)
-                if p.extension.lower() in self.config.video_extensions:
+                if p.extension.lower() in video_exts or p.extension.lower() in subtitle_exts:
                     media_files.append(p)
                 else:
                     print(f"WARNING: Skipping invalid MediaFile: {p.path} (Ext: {p.extension})")
@@ -44,7 +55,7 @@ class ScanService:
             path_obj = Path(p)
             # Strict validation: Check existence and extension
             if path_obj.is_file():
-                if path_obj.suffix.lower() in self.config.video_extensions:
+                if path_obj.suffix.lower() in video_exts or path_obj.suffix.lower() in subtitle_exts:
                     media_files.append(MediaFile(
                         path=path_obj,
                         extension=path_obj.suffix.lower(),

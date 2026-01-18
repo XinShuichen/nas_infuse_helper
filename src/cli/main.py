@@ -32,8 +32,11 @@ def list_items(config_path: str = "config.yaml", search: bool = False):
         console.print(f"[red]Error loading config:[/red] {e}")
         raise typer.Exit(1)
 
-    scanner = Scanner(config.video_extensions)
-    aggregator = Aggregator(config.source_dir)
+    subtitle_extensions = getattr(config, "subtitle_extensions", [])
+    if not isinstance(subtitle_extensions, (list, tuple, set)):
+        subtitle_extensions = []
+    scanner = Scanner(config.video_extensions, subtitle_extensions=list(subtitle_extensions))
+    aggregator = Aggregator(config.source_dir, subtitle_extensions=list(subtitle_extensions))
     classifier = Classifier(config.video_extensions)
     renamer = Renamer()
     searcher = Searcher(config.tmdb_api_key) if search else None
@@ -80,8 +83,11 @@ def link_items(config_path: str = "config.yaml", dry_run: bool = False, search: 
         console.print(f"[red]Error loading config:[/red] {e}")
         raise typer.Exit(1)
 
-    scanner = Scanner(config.video_extensions)
-    aggregator = Aggregator(config.source_dir)
+    subtitle_extensions = getattr(config, "subtitle_extensions", [])
+    if not isinstance(subtitle_extensions, (list, tuple, set)):
+        subtitle_extensions = []
+    scanner = Scanner(config.video_extensions, subtitle_extensions=list(subtitle_extensions))
+    aggregator = Aggregator(config.source_dir, subtitle_extensions=list(subtitle_extensions))
     classifier = Classifier(config.video_extensions)
     renamer = Renamer()
     searcher = Searcher(config.tmdb_api_key) if search else None
