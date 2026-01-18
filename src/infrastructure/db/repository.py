@@ -3,8 +3,6 @@
 from typing import List, Optional, Dict
 from pathlib import Path
 from .database import Database
-import json
-import time
 
 class MediaRepository:
     def __init__(self, db: Database):
@@ -85,6 +83,22 @@ class MediaRepository:
             cursor = conn.execute(query, (parent_dir,))
             row = cursor.fetchone()
             return dict(row) if row else None
+
+    def get_found_in_dir(self, parent_dir: str, limit: int = 50) -> List[Dict]:
+        query = """
+        SELECT * FROM media_mapping
+        WHERE original_path LIKE ? || '%'
+        AND search_status = 'found'
+        AND tmdb_id IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT ?
+        """
+        if not parent_dir.endswith("/"):
+            parent_dir += "/"
+
+        with self.db.get_connection() as conn:
+            cursor = conn.execute(query, (parent_dir, limit))
+            return [dict(row) for row in cursor.fetchall()]
 
 class SymlinkRepository:
     def __init__(self, db: Database):

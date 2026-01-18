@@ -74,6 +74,16 @@ class Classifier:
                 else:
                     item.media_type = MediaType.MOVIE
         else:
-            item.media_type = MediaType.UNKNOWN
+            if item.media_type == MediaType.TV_SHOW:
+                return item
+            is_episode = False
+            for f in item.files:
+                for pattern in self.episode_patterns:
+                    if pattern.search(f.path.name):
+                        is_episode = True
+                        break
+                if is_episode:
+                    break
+            item.media_type = MediaType.TV_SHOW if is_episode else MediaType.MOVIE
 
         return item

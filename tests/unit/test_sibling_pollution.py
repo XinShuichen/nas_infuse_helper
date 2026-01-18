@@ -110,3 +110,66 @@ def test_sibling_optimization_works_in_subdirs(mock_deps):
     
     assert result.tmdb_id == 12345
     assert result.title_cn == "My Show"
+
+
+def test_subtitle_reuses_metadata_in_subdir(mock_deps):
+    config, media_repo, log_repo = mock_deps
+    config.subtitle_extensions = [".srt", ".ass"]
+    service = MatchService(config, media_repo, log_repo)
+
+    parent_dir = config.source_dir / "MovieFolder"
+    subtitle_path = parent_dir / "Movie.2023.chs.ass"
+    item = MediaItem(
+        name=subtitle_path.name,
+        original_path=subtitle_path,
+        files=[MediaFile(path=subtitle_path, extension=".ass", size=0, mtime=0)],
+        media_type=MediaType.UNKNOWN,
+    )
+
+    media_repo.get_by_path.return_value = None
+    media_repo.get_found_in_dir.return_value = [
+        {
+            "original_path": str(parent_dir / "Movie.2023.mkv"),
+            "tmdb_id": 999,
+            "title_cn": "电影",
+            "title_en": "Movie",
+            "year": 2023,
+            "media_type": "Movie",
+        }
+    ]
+    service.searcher.search = MagicMock(return_value=item)
+
+    result = service.process_item(item)
+    assert result.search_status == "found"
+    assert result.tmdb_id == 999
+    assert result.media_type == MediaType.MOVIE
+
+
+def test_subtitle_does_not_reuse_metadata_in_source_root(mock_deps):
+    config, media_repo, log_repo = mock_deps
+    config.subtitle_extensions = [".srt", ".ass"]
+    service = MatchService(config, media_repo, log_repo)
+
+    subtitle_path = config.source_dir / "Random.Movie.ass"
+    item = MediaItem(
+        name=subtitle_path.name,
+        original_path=subtitle_path,
+        files=[MediaFile(path=subtitle_path, extension=".ass", size=0, mtime=0)],
+        media_type=MediaType.UNKNOWN,
+    )
+
+    media_repo.get_by_path.return_value = None
+    media_repo.get_found_in_dir.return_value = [
+        {
+            "original_path": str(config.source_dir / "Other.Movie.mkv"),
+            "tmdb_id": 111,
+            "title_cn": "别的电影",
+            "title_en": "Other",
+            "year": 2000,
+            "media_type": "Movie",
+        }
+    ]
+    service.searcher.search = MagicMock(return_value=item)
+
+    result = service.process_item(item)
+    assert result.tmdb_id != 111
