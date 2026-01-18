@@ -267,6 +267,16 @@ class Server:
             media_type_str = data.get("type", "Movie")
             alias = data.get("alias")
             apply_batch = data.get("apply_batch", False) # New Flag
+
+            tmdb_id_val = selection.get("tmdb_id")
+            if tmdb_id_val is None or tmdb_id_val == "":
+                return jsonify({"error": "tmdb_id is required"}), 400
+            if isinstance(tmdb_id_val, str):
+                if not tmdb_id_val.isdigit():
+                    return jsonify({"error": "tmdb_id must be an integer"}), 400
+                tmdb_id_val = int(tmdb_id_val)
+            if not isinstance(tmdb_id_val, int):
+                return jsonify({"error": "tmdb_id must be an integer"}), 400
             
             media_type = MediaType.MOVIE if media_type_str == "Movie" else MediaType.TV_SHOW
             
@@ -337,7 +347,7 @@ class Server:
                     
                     # Override Metadata with User Selection
                     classified_item.media_type = media_type # Force correct type (Classifier defaults single files to Movie)
-                    classified_item.tmdb_id = selection.get("tmdb_id")
+                    classified_item.tmdb_id = tmdb_id_val
                     classified_item.title_cn = selection.get("title_cn")
                     classified_item.title_en = selection.get("title_en")
                     classified_item.year = selection.get("year") or classified_item.year
@@ -369,7 +379,7 @@ class Server:
                         media_type=MediaType.MOVIE,
                         title_cn=selection.get("title_cn"),
                         title_en=selection.get("title_en"),
-                        tmdb_id=selection.get("tmdb_id"),
+                        tmdb_id=tmdb_id_val,
                         year=selection.get("year"),
                         alias=alias,
                         search_status="found"
@@ -397,7 +407,7 @@ class Server:
                     media_type=media_type,
                     title_cn=selection.get("title_cn"),
                     title_en=selection.get("title_en"),
-                    tmdb_id=selection.get("tmdb_id"),
+                    tmdb_id=tmdb_id_val,
                     year=selection.get("year"),
                     alias=alias,
                     search_status="found"
@@ -415,7 +425,7 @@ class Server:
                 if media_type == MediaType.TV_SHOW:
                     item = self.scan_service.classifier.classify(item)
                     # Re-apply selection in case classify overwrote them (it shouldn't overwrite if not found, but safety)
-                    item.tmdb_id = selection.get("tmdb_id")
+                    item.tmdb_id = tmdb_id_val
                     item.title_cn = selection.get("title_cn")
                     item.title_en = selection.get("title_en")
                     # item.year = ...

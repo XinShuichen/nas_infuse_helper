@@ -181,3 +181,20 @@ def test_confirm_selection_batch_ignored_in_root(app_client):
         assert server.media_repo.save.call_count == 1
         saved = server.media_repo.save.call_args[0][0]
         assert saved["original_path"] == str(source / "root_ep1.mkv")
+
+
+def test_confirm_selection_requires_tmdb_id(app_client):
+    client, source, server = app_client
+    (source / "movie.mkv").touch()
+
+    payload = {
+        "original_path": str(source / "movie.mkv"),
+        "selection": {"title_cn": "测试"},
+        "type": "Movie",
+        "apply_batch": False,
+    }
+
+    response = client.post("/api/confirm", json=payload)
+    assert response.status_code == 400
+    assert server.media_repo.save.call_count == 0
+    assert server.link_service.link_item.call_count == 0
