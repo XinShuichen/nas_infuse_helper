@@ -115,17 +115,29 @@ class Server:
             def run_reprocess():
                 task_manager.start_task(task_id)
                 try:
-                    # Get all unknown/uncertain
+                    # Get all unknown/uncertain and anything previously linked into Unknown
                     unknowns = self.media_repo.get_all("not_found")
                     uncertains = self.media_repo.get_all("uncertain")
                     pendings = self.media_repo.get_all("pending")
-                    all_items = unknowns + uncertains + pendings
+                    unknown_linked = []
+                    with self.db.get_connection() as conn:
+                        cursor = conn.execute(
+                            """
+                            SELECT original_path FROM media_mapping
+                            WHERE media_type = 'Unknown'
+                               OR target_path LIKE 'Unknown/%'
+                               OR target_path LIKE '%/Unknown/%'
+                            """
+                        )
+                        unknown_linked = [{"original_path": row["original_path"]} for row in cursor.fetchall()]
+
+                    all_items = unknowns + uncertains + pendings + unknown_linked
                     
                     if not all_items:
                         task_manager.complete_task(task_id, "No items to reprocess")
                         return
 
-                    paths = [item["original_path"] for item in all_items]
+                    paths = sorted({item["original_path"] for item in all_items if item.get("original_path")})
                     task_manager.update_progress(task_id, 0, f"Reprocessing {len(paths)} items...")
                     
                     # We can use scan_service.process_paths but we want progress updates

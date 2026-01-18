@@ -28,7 +28,7 @@ class MatchService:
 
             # Use existing metadata
             item.alias = existing.get("alias")
-            if existing.get("tmdb_id") and existing.get("search_status") == "found":
+            if existing.get("tmdb_id") is not None and existing.get("search_status") == "found":
                 # Restore metadata from DB
                 item.tmdb_id = existing.get("tmdb_id")
                 item.title_cn = existing.get("title_cn")
@@ -37,7 +37,9 @@ class MatchService:
                 stored_media_type = existing.get("media_type")
                 if stored_media_type:
                     try:
-                        item.media_type = MediaType(stored_media_type)
+                        stored_enum = MediaType(stored_media_type)
+                        if stored_enum != MediaType.UNKNOWN:
+                            item.media_type = stored_enum
                     except ValueError:
                         pass
                 item.search_status = "found"

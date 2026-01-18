@@ -173,3 +173,32 @@ def test_subtitle_does_not_reuse_metadata_in_source_root(mock_deps):
 
     result = service.process_item(item)
     assert result.tmdb_id != 111
+
+
+def test_db_restore_does_not_force_unknown_media_type(mock_deps):
+    config, media_repo, log_repo = mock_deps
+    config.subtitle_extensions = [".srt", ".ass"]
+    service = MatchService(config, media_repo, log_repo)
+
+    video_path = config.source_dir / "MovieFolder" / "Movie.2023.mkv"
+    item = MediaItem(
+        name=video_path.name,
+        original_path=video_path,
+        files=[MediaFile(path=video_path, extension=".mkv", size=0, mtime=0)],
+        media_type=MediaType.MOVIE,
+    )
+
+    media_repo.get_by_path.return_value = {
+        "original_path": str(video_path),
+        "search_status": "found",
+        "tmdb_id": 999,
+        "title_cn": "电影",
+        "title_en": "Movie",
+        "year": 2023,
+        "media_type": "Unknown",
+    }
+
+    result = service.process_item(item)
+    assert result.search_status == "found"
+    assert result.tmdb_id == 999
+    assert result.media_type == MediaType.MOVIE
